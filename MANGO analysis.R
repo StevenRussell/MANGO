@@ -2,6 +2,7 @@
 # Loading packages
 
 library(dplyr)
+library(TOSTER)
 
 # Setting directory
 
@@ -18,11 +19,21 @@ codes     <- read.csv(paste0(dir, "MANGO codes DSMB.csv"))
 long.data <- merge(x=long.data, y=codes, by="id")
 wide.data <- merge(x=wide.data, y=codes, by="id")
 
-# Adding change in whz, waz, haz
+# Change dates to date format
+
+wide.data$date_adm <- as.Date(wide.data$date_adm, format="%m/%d/%Y")
+wide.data$date_exit <- as.Date(wide.data$date_exit, format="%m/%d/%Y")
+wide.data$dint0 <- as.Date(wide.data$dint0, format="%m/%d/%Y")
+wide.data$dint2 <- as.Date(wide.data$dint2, format="%m/%d/%Y")
+
+# Adding change in whz, waz, haz, weight gain by in week 0-2 vs. week 3+
 
 wide.data <- wide.data %>% 
               mutate(avg.whz.change  = whz_exit - whz0,
-                     avg.muac.change = muac_exit - muac0)
+                     avg.muac.change = muac_exit - muac0,
+                     #avg.haz.change = haz_exit - haz0,
+                     weight.gain.02 = (weight2 - weight0) / as.numeric(dint2 - dint0),
+                     weight.gain.3 = (weight_exit - weight2) / as.numeric(date_exit - dint2))
 
 # Grouping data by dosage
 
@@ -33,19 +44,43 @@ wide.data <- group_by(wide.data, dosage)
 
   # Gender
     table(wide.data$dosage, wide.data$sex)    # Dose 1: 50.4% female, Dose 2: 55.5% female
-
+    prop.table(table(wide.data$dosage, wide.data$sex,exclude=""),1)
+    
+  # Criteria of admission
+    table(wide.data$dosage, wide.data$criteria_adm)  
+    prop.table(table(wide.data$dosage, wide.data$criteria_adm, exclude=""),1)
+    
   # Age
     wide.data %>%                               # Average age of those treated:
       group_by(dosage) %>%                      #   Dose 1: 13.8 years old
-        summarise(mean.age=mean(age, na.rm=T))  #   Dose 2: 12.5 years old
-      
-  # Week of exit
+        summarise(mean.age=mean(age, na.rm=T),
+                  sd.age=sd(age, na.rm=T))  #   Dose 2: 12.5 years old
+
+  # MUAC at entry
     wide.data %>%
       group_by(dosage) %>%
-        summarise(mean.exit.week=mean(exit_visit, na.rm=T))
-
-  # Criteria of admission
-    table(wide.data$dosage, wide.data$criteria_adm) 
+      summarise(mean.muac=mean(muac0, na.rm=T),
+                sd.muac=sd(muac0, na.rm=T))             
+                               
+  # weight at entry
+    wide.data %>%
+      group_by(dosage) %>%
+      summarise(mean.weight.entry=mean(weight0, na.rm=T),
+                sd.weight.entry=sd(weight0, na.rm=T)) 
+    
+  # weight for height z-score at entry
+    wide.data %>%
+      group_by(dosage) %>%
+      summarise(mean.whz.entry=mean(whz0, na.rm=T),
+                sd.whz.entry=sd(whz0, na.rm=T))
+                
+    
+  # height for age z-score at entry
+    wide.data %>%
+      group_by(dosage) %>%
+      summarise(mean.haz.entry=mean(haz0, na.rm=T),
+                sd.haz.entry=sd(haz0, na.rm=T)) 
+    
     
   # Length of stay
     wide.data %>%
@@ -57,37 +92,56 @@ wide.data <- group_by(wide.data, dosage)
       group_by(dosage) %>%
       summarise(mean.weight.gain=mean(wgain_d, na.rm=T)) 
     
-  # MUAC at entry
-    wide.data %>%
-      group_by(dosage) %>%
-      summarise(mean.muac=mean(muac0, na.rm=T))
-    
-  # weight at entry
-    wide.data %>%
-      group_by(dosage) %>%
-      summarise(mean.weight.entry=mean(weight0, na.rm=T)) 
-    
-  # weight for height z-score at entry
-    wide.data %>%
-      group_by(dosage) %>%
-      summarise(mean.whz.entry=mean(whz0, na.rm=T)) 
-    
+  
 # Looking at differences in outcomes
     
     # change in MUAC
     wide.data %>%
       group_by(dosage) %>%
-      summarise(mean.muac.change=mean(avg.muac.change, na.rm=T)) 
+      summarise(mean.muac.change=mean(avg.muac.change, na.rm=T),
+                sd.muac.change=sd(avg.muac.change, na.rm=T))
+                
+    # change in weight
+    wide.data %>%
+      group_by(dosage) %>%
+      summarise(mean.weight.change=mean(avg.weight.change, na.rm=T),
+                sd.weight.change=sd(avg.weight.change, na.rm=T))
     
     # change in weight for height z-score
     wide.data %>%
       group_by(dosage) %>%
-      summarise(mean.whz.change=mean(avg.whz.change, na.rm=T)) 
+      summarise(mean.whz.change=mean(avg.whz.change, na.rm=T),
+                sd.whz.change=sd(avg.whz.change, na.rm=T))
+    
+    # change in height for age z-score
+    wide.data %>%
+      group_by(dosage) %>%
+      summarise(mean.haz.change=mean(avg.haz.change, na.rm=T),
+                sd.haz.change=sd(avg.haz.change, na.rm=T))
+    
+    # Rate of weight gain from admission to exit (g/kg/d) *Weeks 0-2
+    wide.data %>%
+      group_by(dosage) %>%
+      summarise(mean.weight.gain=mean(weight.gain.02, na.rm=T),
+                sd.weight.gain=sd(weight.gain.02, na.rm=T))
+
+    # Rate of weight gain from admission to exit (g/kg/d) *Weeks 3+
+    wide.data %>%
+      group_by(dosage) %>%
+      summarise(mean.weight.gain=mean(weight.gain.3, na.rm=T)) 
+    
     
 # 2x2 table of reason for exit
-table(wide.data$dosage, wide.data$exit)
+    
+referral.table <- table(wide.data$dosage, wide.data$exit, exclude="")
 
-prop.table(wide.data$dosage, wide.data$exit)
+referral.prop.table <- prop.table(referral.table, 1)
+
+#
+
+table(wide.data$dosage, wide.data$exit, exclude="")
+
+
 
 # Rate of weight gain
 
@@ -101,12 +155,6 @@ dat.compare <- wide.data %>%
 dat.compare <- data.frame(dat.compare)
 n <- c(121, 119)
 dat.compare <- cbind(dat.compare, n)
-
-install.packages("TOSTER")
-library(TOSTER)
-
-
-
 
 # Independent samples t-test
 
@@ -137,3 +185,15 @@ t.test(wide.data$wgain_d ~ wide.data$dosage)
 
 # TOST: Two One-Sided Tests Procedure
 # NHST: Null Hypothesis Significance Testing
+
+
+
+
+
+
+# Scrap
+
+# Week of exit
+wide.data %>%
+  group_by(dosage) %>%
+  summarise(mean.exit.week=mean(exit_visit, na.rm=T))
