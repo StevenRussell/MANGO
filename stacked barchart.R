@@ -1,5 +1,9 @@
 
+library(RColorBrewer)
 
+referral.table <- table(wide.data$dosage, wide.data$exit, exclude="")
+
+referral.prop.table <- prop.table(referral.table, 1)
 
 tb <- data.frame(cbind( c("Dose 1", "Dose 2"), referral.prop.table))
 colnames(tb)[1] <- "Arm"
@@ -16,7 +20,7 @@ par(mfrow=c(1, 1), oma=c(2, 2, 2, 2)) #, mar=c(0, 0, 0, 0))
 sequential <- brewer.pal(6, "BuGn")
 
 barplot(t(tb[,2:6]),
-        names.arg = tb$arm, # x-axis labels
+        names.arg = c("Dose 1","Dose 2"), # x-axis labels
         cex.names = 1.5, # makes x-axis labels small enough to show all
         col = sequential[6:2], # colors
         #xlab = "Trial arm",
@@ -24,7 +28,7 @@ barplot(t(tb[,2:6]),
         xlim = c(0,3.5), # these two lines allow space for the legend
         width = 1,
         axes=F) # these two lines allow space for the legend
-legend(x=2.7, y=.5, 
+legend(x=2.6, y=.5, 
        legend = names(tb)[2:6], #in order from top to bottom
        fill = sequential[6:2], # 6:1 reorders so legend order matches graph
        title = "Classification",
