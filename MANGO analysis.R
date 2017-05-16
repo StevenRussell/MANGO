@@ -12,7 +12,7 @@ library(dplyr)
 library(stringr)
 library(TOSTER)
 library(MASS)
-library(C50)  # may not need this
+library(C50)
 library(xtable)
 library(gridExtra)
 
@@ -85,7 +85,26 @@ wide.data <- wide.data %>%
                                               ifelse(current.week == 13, (weight13 - weight0)*1000 / as.numeric(dint13 - dint0) / weight0,      
                                               ifelse(current.week == 14, (weight14 - weight0)*1000 / as.numeric(dint14 - dint0) / weight0,
                                               ifelse(current.week == 15, (weight15 - weight0)*1000 / as.numeric(dint15 - dint0) / weight0,      
-                                              ifelse(current.week == 16, (weight16 - weight0)*1000 / as.numeric(dint16 - dint0) / weight0,NA)))))))))))))))))        
+                                              ifelse(current.week == 16, (weight16 - weight0)*1000 / as.numeric(dint16 - dint0) / weight0,NA)))))))))))))))),
+                     
+                     stay.unfinished = ifelse(current.week == 1, (dint1 - dint0),
+                                       ifelse(current.week == 2, (dint2 - dint0),
+                                       ifelse(current.week == 3, (dint3 - dint0),
+                                       ifelse(current.week == 4, (dint4 - dint0),
+                                       ifelse(current.week == 5, (dint5 - dint0),
+                                       ifelse(current.week == 6, (dint6 - dint0),
+                                       ifelse(current.week == 7, (dint7 - dint0),
+                                       ifelse(current.week == 8, (dint8 - dint0),
+                                       ifelse(current.week == 9, (dint9 - dint0),
+                                       ifelse(current.week == 10, (dint10 - dint0),
+                                       ifelse(current.week == 11, (dint11 - dint0),
+                                       ifelse(current.week == 12, (dint12 - dint0),
+                                       ifelse(current.week == 13, (dint13 - dint0),
+                                       ifelse(current.week == 14, (dint14 - dint0),
+                                       ifelse(current.week == 15, (dint15 - dint0),
+                                       ifelse(current.week == 16, (dint16 - dint0),NA))))))))))))))))
+                     
+                     )        
                                                    
                   
 # Grouping data by dosage
@@ -178,6 +197,14 @@ wide.data <- group_by(wide.data, dosage)
                 sd.haz.entry=sd(haz0, na.rm=T)) 
     
     t.test(wide.data$haz0 ~ wide.data$dosage)
+    
+  # date of admission
+    wide.data %>%
+      group_by(dosage) %>%
+      summarise(mean.date.entry=mean(date_adm, na.rm=T),
+                sd.date.entry=sd(date_adm, na.rm=T)) 
+    
+    t.test(wide.data$date_adm ~ wide.data$dosage)
 
 # --------------------------------------------------------------------------------------------------------------------------------- #
 #                                             Looking at differences in outcomes                                                    #
@@ -190,6 +217,46 @@ wide.data <- group_by(wide.data, dosage)
                 sd.length.of.stay=sd(stay, na.rm=T))
                 
     t.test(wide.data$stay ~ wide.data$dosage)
+    
+  # Length of stay (among those who recovered)
+    wide.data[wide.data$exit == "Recovered",] %>%
+      group_by(dosage) %>%
+      summarise(mean.length.of.stay=mean(stay, na.rm=T),
+                sd.length.of.stay=sd(stay, na.rm=T))
+    
+    t.test(wide.data[wide.data$exit == "Recovered",]$stay ~ wide.data[wide.data$exit == "Recovered",]$dosage)
+    
+  # Length of stay (among those who were referred)
+    wide.data[wide.data$exit == "Referred",] %>%
+      group_by(dosage) %>%
+      summarise(mean.length.of.stay=mean(stay, na.rm=T),
+                sd.length.of.stay=sd(stay, na.rm=T))
+    
+    t.test(wide.data[wide.data$exit == "Referred",]$stay ~ wide.data[wide.data$exit == "Referred",]$dosage)
+   
+  # Length of stay (among those who defaulted)
+    wide.data[wide.data$exit == "Defaulted",] %>%
+      group_by(dosage) %>%
+      summarise(mean.length.of.stay=mean(stay, na.rm=T),
+                sd.length.of.stay=sd(stay, na.rm=T))
+    
+    t.test(wide.data[wide.data$exit == "Defaulted",]$stay ~ wide.data[wide.data$exit == "Defaulted",]$dosage)
+    
+  # Length of stay (among those who are finished)
+    wide.data[wide.data$finished == 1,] %>%
+      group_by(dosage) %>%
+      summarise(mean.length.of.stay=mean(stay, na.rm=T),
+                sd.length.of.stay=sd(stay, na.rm=T))
+    
+    t.test(wide.data[wide.data$finished == 1,]$stay ~ wide.data[wide.data$finished == 1,]$dosage)
+    
+  # Length of stay (among those who are unfinished)
+    wide.data[wide.data$finished == 0,] %>%
+      group_by(dosage) %>%
+      summarise(mean.length.of.stay=mean(stay.unfinished, na.rm=T),
+                sd.length.of.stay=sd(stay.unfinished, na.rm=T))
+    
+    t.test(wide.data[wide.data$finished == 0,]$stay.unfinished ~ wide.data[wide.data$finished == 0,]$dosage)
     
   # Rate of weight gain from admission to exit (g/kg/d) # (weight_exit - weight_adm)/stay/weight_adm
     wide.data %>%
@@ -529,6 +596,26 @@ whz_pass <- data.frame(cbind(
 #                                                     Binomial Odds Ratios                                                          #
 # --------------------------------------------------------------------------------------------------------------------------------- #
 
+new.dat <- wide.data[wide.data$finished == 1,]
+
+x <- glm(recovered.status ~ dosage, family=binomial(link="logit"), data=new.dat)
+n = round(exp(cbind(coef(x), confint(x))), 2)[2,]
+paste0(n[1], " (", n[2], ",", n[3], ")" ) 
+
+x <- glm(referred.status ~ dosage, family=binomial(link="logit"), data=new.dat)
+n = round(exp(cbind(coef(x), confint(x))), 2)[2,]
+paste0(n[1], " (", n[2], ",", n[3], ")" ) 
+
+x <- glm(default.status ~ dosage, family=binomial(link="logit"), data=new.dat)
+n = round(exp(cbind(coef(x), confint(x))), 2)[2,]
+paste0(n[1], " (", n[2], ",", n[3], ")" ) 
+
+x <- glm(finished ~ dosage, family=binomial(link="logit"), data=wide.data)
+n = round(exp(cbind(coef(x), confint(x))), 2)[2,]
+paste0(n[1], " (", n[2], ",", n[3], ")" ) 
+
+##
+
 OR <- function(predictor){
   
   x <- glm(recovered.status ~ predictor, family=binomial(link="logit"), data=wide.data)
@@ -553,6 +640,13 @@ grid.table(table6)
 
 dev.off()
 
+# Among those who finished
+
+f <- wide.data[wide.data$finished == 1,]
+table(f$dosage, f$recovered.status)
+x <- glm(recovered.status ~ f$dosage, family=binomial(link="logit"), data=f)
+n = round(exp(cbind(coef(x), confint(x))), 2)[2,]
+paste0(n[1], " (", n[2], ",", n[3], ")" 
 
 # Referral
 
@@ -632,6 +726,31 @@ grid.table(table9)
 
 dev.off()
 
+# Finished
+
+OR <- function(predictor){
+  
+  x <- glm(finished ~ predictor, family=binomial(link="logit"), data=wide.data)
+  n = round(exp(cbind(coef(x), confint(x))), 2)[2,]
+  paste0(n[1], " (", n[2], ",", n[3], ")" )   
+  
+}
+
+predicter.labels <- c("Age", "Sex", "Weight for Height Z-score", "Height for Age Z-score",
+                      "MUAC at admission", "Weight at admission", "Dosage")
+
+predicter.data <- matrix(cbind(wide.data$age, wide.data$sex, wide.data$whz_adm, wide.data$haz_adm,
+                               wide.data$muac_adm, wide.data$weight_adm, wide.data$dosage), nrow=240, ncol=7)
+
+table10 <- cbind(predicter.labels, apply(predicter.data, 2, OR))
+
+# Saving table
+
+pdf( paste0(dir, "table10.pdf"), height=10, width=5) 
+
+grid.table(table10)
+
+dev.off()
 
 # --------------------------------------------------------------------------------------------------------------------------------- #
 #                                                           Regression                                                              #
