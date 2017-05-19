@@ -363,14 +363,7 @@ wide.data <- group_by(wide.data, dosage)
     t2 <- mutate(t, dose1 = paste0( X3, " (", round(X1 * 100,2), "%)"),
                     dose2 = paste0( X4, " (", round(X2 * 100,2), "%)"))
     
-    t3 <- t2[,5:6]
-    
-    select(t2, X1)
-    
-    %>%
-                    select( dose1, dose2)
-                
-           
+
     t2 <- t * 100
     
     
@@ -772,8 +765,6 @@ model <- glm(recovered.status ~ whz_adm + haz_adm + muac_adm + weight_adm + csps
              family=binomial(link='logit'), data=wide.data)
 summary(model)
 
-
-
 # Missing values
 
 install.packages("Amelia")
@@ -826,10 +817,7 @@ axis(2, at=c(0, 120, 240),  line=0, #labels=c("", "20%", "40%", "60%", "80%", "1
 
 dev.off()
 
-
 # Forest
-
-
 
 # scramble the order of the credit data to avoid bias
 
