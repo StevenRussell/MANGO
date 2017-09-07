@@ -582,15 +582,8 @@ TOSTtwo(m1=dat.compare[1,2],
         alpha = 0.05,
         var.equal=FALSE)
 
-# https://cran.rstudio.com/web/packages/TOSTER/vignettes/IntroductionToTOSTER.html
 
 t.test(wide.data$wgain_d ~ wide.data$dosage)
-
-# TOST: Two One-Sided Tests Procedure
-# NHST: Null Hypothesis Significance Testing
-
-
-
 
 
 
